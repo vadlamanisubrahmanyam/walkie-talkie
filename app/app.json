@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "PocketPTT",
+    "slug": "pocket-ptt",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.subrahmanyam.pocketptt",
+      "permissions": ["RECORD_AUDIO", "INTERNET", "MODIFY_AUDIO_SETTINGS"]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ]
+    ]
+  }
+}

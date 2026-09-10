@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /clips/{channelId}/{fileName} {
+      allow read: if true;
+      // Same caveat as firestore.rules: no auth yet in v1, so this only
+      // bounds file size/type, not who's allowed to upload.
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('audio/.*');
+    }
+  }
+}
