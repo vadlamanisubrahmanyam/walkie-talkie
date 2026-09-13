@@ -5,6 +5,10 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#fafafa",
+      "resizeMode": "contain"
+    },
     "android": {
       "package": "com.subrahmanyam.pocketptt",
       "permissions": ["RECORD_AUDIO", "INTERNET", "MODIFY_AUDIO_SETTINGS"]
