@@ -10,6 +10,19 @@ export async function requestPermissions() {
 }
 
 export async function startRecording() {
+  if (recording) {
+    // Defensive cleanup: if a previous Recording object was never properly
+    // unloaded (e.g. an earlier error path), expo-av's native layer still
+    // thinks a recording is active and prepareToRecordAsync() below will
+    // throw "Only one Recording object can be prepared at a given time."
+    try {
+      await recording.stopAndUnloadAsync();
+    } catch (e) {
+      // Already stopped/unloaded natively — safe to ignore.
+    }
+    recording = null;
+  }
+
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: false,
     playsInSilentModeIOS: false,
@@ -24,10 +37,9 @@ export async function startRecording() {
 export async function stopRecordingAndUpload(channelId) {
   if (!recording) throw new Error("No active recording");
 
-  await recording.stopAndUnloadAsync();
-  const status = await recording.getStatusAsync();
+  const finalStatus = await recording.stopAndUnloadAsync();
   const uri = recording.getURI();
-  const durationMs = status.durationMillis ?? 0;
+  const durationMs = finalStatus.durationMillis ?? 0;
   recording = null;
 
   const response = await fetch(uri);

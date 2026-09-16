@@ -14,6 +14,10 @@ export default function ChannelScreen({ route }) {
   const { channel, userName } = route.params;
   const [clips, setClips] = useState([]);
   const [busy, setBusy] = useState(false);
+  // React state updates aren't synchronous — a fast double-press can fire
+  // handleStart twice before `busy` re-renders. This ref blocks re-entry
+  // immediately, on the same tick, which state alone can't guarantee.
+  const startingOrRecording = useRef(false);
   const screenOpenedAt = useRef(Date.now());
   const seenClipIds = useRef(new Set());
 
@@ -39,8 +43,12 @@ export default function ChannelScreen({ route }) {
   }, [channel.id]);
 
   const handleStart = async () => {
+    if (startingOrRecording.current) return; // already recording/starting — ignore
+    startingOrRecording.current = true;
+
     const granted = await requestPermissions();
     if (!granted) {
+      startingOrRecording.current = false;
       Alert.alert("Microphone permission needed", "Enable microphone access to talk.");
       return;
     }
@@ -48,6 +56,7 @@ export default function ChannelScreen({ route }) {
     try {
       await startRecording();
     } catch (e) {
+      startingOrRecording.current = false;
       setBusy(false);
       Alert.alert("Couldn't start recording", e.message);
     }
@@ -65,6 +74,7 @@ export default function ChannelScreen({ route }) {
       Alert.alert("Send failed", e.message);
       await cancelRecording();
     } finally {
+      startingOrRecording.current = false;
       setBusy(false);
     }
   };
@@ -89,7 +99,7 @@ export default function ChannelScreen({ route }) {
       />
 
       <View style={styles.pttWrap}>
-        <PTTButton onStart={handleStart} onStop={handleStop} disabled={busy && false} />
+        <PTTButton onStart={handleStart} onStop={handleStop} disabled={busy} />
       </View>
     </View>
   );
