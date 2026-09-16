@@ -1,5 +1,6 @@
 import { Audio } from "expo-av";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import * as FileSystem from "expo-file-system";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebaseConfig";
 
 let recording = null;
@@ -42,12 +43,19 @@ export async function stopRecordingAndUpload(channelId) {
   const durationMs = finalStatus.durationMillis ?? 0;
   recording = null;
 
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  // fetch(uri).then(r => r.blob()) + uploadBytes() is unreliable on React
+  // Native/Hermes — the Blob it produces often uploads as malformed data,
+  // which Firebase Storage reports back as a generic "storage/unknown"
+  // error with no useful detail. Reading the file as base64 and uploading
+  // with uploadString() sidesteps RN's Blob implementation entirely and is
+  // the standard, reliable pattern for Expo + Firebase Storage.
+  const base64Data = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   const filename = `clips/${channelId}/${Date.now()}.m4a`;
   const storageRef = ref(storage, filename);
-  await uploadBytes(storageRef, blob);
+  await uploadString(storageRef, base64Data, "base64", { contentType: "audio/m4a" });
   const downloadUrl = await getDownloadURL(storageRef);
 
   return { downloadUrl, durationMs };
