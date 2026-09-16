@@ -1,7 +1,6 @@
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebaseConfig";
+import { app } from "../firebaseConfig";
 
 let recording = null;
 
@@ -43,20 +42,36 @@ export async function stopRecordingAndUpload(channelId) {
   const durationMs = finalStatus.durationMillis ?? 0;
   recording = null;
 
-  // fetch(uri).then(r => r.blob()) + uploadBytes() is unreliable on React
-  // Native/Hermes — the Blob it produces often uploads as malformed data,
-  // which Firebase Storage reports back as a generic "storage/unknown"
-  // error with no useful detail. Reading the file as base64 and uploading
-  // with uploadString() sidesteps RN's Blob implementation entirely and is
-  // the standard, reliable pattern for Expo + Firebase Storage.
-  const base64Data = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
+  // Both uploadBytes() and uploadString() were tried, and both fail here:
+  // the Firebase JS SDK's Storage module internally builds a Blob from an
+  // ArrayBuffer/Uint8Array before uploading, and React Native's Blob
+  // polyfill explicitly doesn't support that constructor form ("Creating
+  // blobs from 'ArrayBuffer' and 'ArrayBufferView' are not supported").
+  // That's inside the SDK itself, not something we can work around by
+  // changing how we read the file — so we bypass the SDK's storage module
+  // entirely and upload straight to the Storage REST endpoint via
+  // FileSystem.uploadAsync(), which streams the file from disk over a real
+  // HTTP request and never constructs a JS Blob at all.
+  const bucket = app.options.storageBucket;
+  const objectPath = `clips/${channelId}/${Date.now()}.m4a`;
+  const encodedPath = encodeURIComponent(objectPath);
+  const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?name=${encodedPath}`;
+
+  const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: { "Content-Type": "audio/m4a" },
   });
 
-  const filename = `clips/${channelId}/${Date.now()}.m4a`;
-  const storageRef = ref(storage, filename);
-  await uploadString(storageRef, base64Data, "base64", { contentType: "audio/m4a" });
-  const downloadUrl = await getDownloadURL(storageRef);
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(
+      `Upload failed (HTTP ${uploadResult.status}). Check that storage.rules is deployed and allows this write.`
+    );
+  }
+
+  const responseJson = JSON.parse(uploadResult.body);
+  const downloadToken = responseJson.downloadTokens;
+  const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
   return { downloadUrl, durationMs };
 }
