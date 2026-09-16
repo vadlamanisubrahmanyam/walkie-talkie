@@ -3,16 +3,18 @@
 // Firestore/Storage security rules actually enforce access control (see firestore.rules).
 
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME",
+    apiKey: "AIzaSyC7YnH27cYfIu-09uwcVgxC_P4oqhUe7hg",
+    authDomain: "walkie-talkie-6f866.firebaseapp.com",
+    databaseURL: "https://walkie-talkie-6f866-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "walkie-talkie-6f866",
+    storageBucket: "walkie-talkie-6f866.firebasestorage.app",
+    messagingSenderId: "1007349613163",
+    appId: "1:1007349613163:web:a60f73928a39fa103f272e",
+    measurementId: "G-P8G8E6MCXT"
 };
 
 // Lets screens show a clear, specific message ("Firebase isn't configured
@@ -23,5 +25,15 @@ export function isFirebaseConfigured() {
 }
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+// getFirestore(app) opens Firestore's default WebChannel/streaming
+// transport, which assumes a browser environment. In React Native this
+// doesn't reliably error — it just hangs indefinitely on reads/writes with
+// no exception thrown, which looks exactly like a frozen "Creating..."
+// spinner. Long-polling is the supported transport for RN.
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
 export const storage = getStorage(app);

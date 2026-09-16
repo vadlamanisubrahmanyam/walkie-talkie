@@ -3,6 +3,7 @@ import { View, Text, FlatList, Pressable, TextInput, StyleSheet, Alert, Activity
 import { createChannel, joinChannelByCode } from "../services/firestoreService";
 import { isFirebaseConfigured } from "../firebaseConfig";
 import { validateChannelName, validateInviteCode } from "../utils/validation";
+import { withTimeout } from "../utils/withTimeout";
 
 // v1: channel list is stored locally (AsyncStorage) since there is no user
 // auth yet — each device just remembers which channel ids/names it has
@@ -39,7 +40,11 @@ export default function ChannelsScreen({ navigation, joinedChannels, setJoinedCh
     setCreateError(null);
     setCreating(true);
     try {
-      const { id, inviteCode } = await createChannel(check.value, userName);
+      const { id, inviteCode } = await withTimeout(
+        createChannel(check.value, userName),
+        15000,
+        "Timed out talking to Firebase — check your connection and try again."
+      );
       const channel = { id, name: check.value, inviteCode };
       setJoinedChannels([...joinedChannels, channel]);
       setNewChannelName("");
@@ -62,7 +67,11 @@ export default function ChannelsScreen({ navigation, joinedChannels, setJoinedCh
     setJoinError(null);
     setJoining(true);
     try {
-      const channelId = await joinChannelByCode(check.value, userName);
+      const channelId = await withTimeout(
+        joinChannelByCode(check.value, userName),
+        15000,
+        "Timed out talking to Firebase — check your connection and try again."
+      );
       const channel = { id: channelId, name: check.value, inviteCode: check.value };
       setJoinedChannels([...joinedChannels, channel]);
       setJoinCode("");
