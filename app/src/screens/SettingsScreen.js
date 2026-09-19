@@ -16,6 +16,16 @@ export default function SettingsScreen({ userName, setUserName }) {
           planned for a later branch, same as FamilyCircle's phase-2 work.
         </Text>
       </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Build</Text>
+        <Text style={styles.cardBody}>
+          v0.1.5 — REST-based Storage upload (bypasses Firebase SDK's
+          Blob/ArrayBuffer upload path, which isn't supported on React
+          Native). If this text doesn't match what you expect, the device
+          is running an older build — reinstall the latest APK.
+        </Text>
+      </View>
     </View>
   );
 }

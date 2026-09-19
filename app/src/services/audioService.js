@@ -53,6 +53,11 @@ export async function stopRecordingAndUpload(channelId) {
   // FileSystem.uploadAsync(), which streams the file from disk over a real
   // HTTP request and never constructs a JS Blob at all.
   const bucket = app.options.storageBucket;
+  if (!bucket || bucket.includes("REPLACE_ME")) {
+    throw new Error(
+      "storageBucket is missing or still a placeholder in src/firebaseConfig.js — copy the exact value from Firebase Console > Project settings > General > Your apps."
+    );
+  }
   const objectPath = `clips/${channelId}/${Date.now()}.m4a`;
   const encodedPath = encodeURIComponent(objectPath);
   const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?name=${encodedPath}`;
@@ -64,9 +69,18 @@ export async function stopRecordingAndUpload(channelId) {
   });
 
   if (uploadResult.status < 200 || uploadResult.status >= 300) {
-    throw new Error(
-      `Upload failed (HTTP ${uploadResult.status}). Check that storage.rules is deployed and allows this write.`
-    );
+    // Surface Google's actual error body (e.g. "The specified bucket does
+    // not exist") instead of just the status code — this is the detail
+    // that actually tells you what's wrong, rather than requiring another
+    // round trip to find out.
+    let detail = uploadResult.body;
+    try {
+      const parsed = JSON.parse(uploadResult.body);
+      detail = parsed?.error?.message || uploadResult.body;
+    } catch (e) {
+      // body wasn't JSON — use it as-is (already assigned above)
+    }
+    throw new Error(`Upload failed (HTTP ${uploadResult.status}) on bucket "${bucket}": ${detail}`);
   }
 
   const responseJson = JSON.parse(uploadResult.body);
