@@ -14,7 +14,7 @@ const firebaseConfig = {
   storageBucket: "walkie-talkie-6f866.firebasestorage.app",
   messagingSenderId: "1007349613163",
   appId: "1:1007349613163:web:a60f73928a39fa103f272e",
-  measurementId: "G-P8G8E6MCXT",
+  measurementId: "G-P8G8E6MCXT"
 };
 
 // Lets screens show a clear, specific message ("Firebase isn't configured
